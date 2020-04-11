@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.interpolate import interp1d
 
 def build_cst_function(val=1):
     def func(*x, **kwargs):
@@ -64,3 +65,42 @@ class InputModule(ModuleBuilder):
         nbpoint = dur * self.sr
         return amp * self.wf(
                     np.arange(nbpoint) * 2 * np.pi / self.sr * freq)
+
+###################
+
+class SimpleEnvelope(ModuleBuilder):
+    def __init__(self, name='smpl_env', *ys):
+        if len(ys) == 0:
+            ys = [1]
+        self.ys = ys
+        super().__init__(
+            name=name, n_in=1, n_out=1, function=self.function
+        )
+
+    def _make_interpolant(self):
+        ts = np.linspace(0, 1, len(self.ys) + 2)
+        interp = interp1d(
+            ts, np.concatenate(([0], self.ys, [0])), kind='cubic'
+        )
+        self.interp = interp
+
+    def function(self, input_):
+        self._make_interpolant()
+        env = self.interp(np.linspace(0, 1, len(input_)))
+        return env * input_
+
+####################
+
+class SimpleSaturation(ModuleBuilder):
+    def __init__(self, name='simpl_sat', maxamp=1):
+        self.maxamp = maxamp
+        super().__init__(
+            name=name, n_in=1, n_out=1, function=self.saturate
+        )
+
+    def saturate(self, input_):
+        input_ = np.asarray(input_)
+        target = input_.max() * self.maxamp
+        input_[input_ > target] = target
+        input_[input_ < -target] = -target
+        return input_

@@ -29,9 +29,7 @@ def make_single_note():
     pb = plugboard.Plugboard('inputmod', 'inputmod')
     mono = synths.MonophonicSynth('mono', mods=[inputmod])
     mono.pb=pb
-
     note = (440., 1, 1)
-
     return mono, mono.play_note(note)
 
 def octave(mode='major'):
@@ -46,7 +44,7 @@ def octave(mode='major'):
     music = np.concatenate(
         [mono.play_note(note) for note in inputs]
     )
-    return music
+    return inputs, music
 
 def auclairdelalune(mode='major'):
     mono, music = make_single_note()
