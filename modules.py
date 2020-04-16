@@ -177,3 +177,50 @@ class SimpleDelay(ModuleBuilder):
         length = int(self.sr * self.delay)
         self.memo = NumpyQueue(maxsize=length)
         self._init_flag = True
+
+###################
+
+def quantbottom(x, steps):
+    # bottom
+    if x > steps[-1]:
+        return steps[-1]
+    else:
+        return steps[np.argmax(x < steps)]
+
+def quanttop(x, steps):
+    # top
+    if x < steps[0]:
+        return steps[0]
+    else:
+        return steps[np.argmax(x < steps) - 1]
+
+def quantclosest(x, steps):
+    # middle(x, steps)
+    return steps[np.argmin(abs(x - steps))]
+
+class Quantizer(ModuleBuilder):
+    def __init__(self, name='quant',
+                 step=1, start=0, end=25, amp=1,
+                 kind='closest'):
+        self.step = step
+        self.start = start
+        self.end = end
+        self.amp = amp
+        self.kind = kind
+        self.make_function()
+        self.steps = np.arange(start, end+step, step)
+        assert len(self.steps), 'no quantization steps found'
+        super().__init__(
+            name=name, n_in=1, n_out=1, function=self.function
+        )
+
+    def make_function(self):
+        if self.kind is 'top':
+            func = quanttop
+        elif self.kind is 'bottom':
+            func = quantbottom
+        elif self.kind is 'closest':
+            func = quantclosest
+        else:
+            raise ValueError('quantization kind not understood')
+        self.function = lambda x: func(x, self.steps)
