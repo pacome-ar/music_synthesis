@@ -11,11 +11,15 @@ class MonophonicSynth():
             copied.name = name
         return copied
 
-    def __init__(self, name, mods=[], pb=None):
+    def __init__(self, name='mono', modules=[], pb=None, sr=44000):
         self.name = name
         self.pb = pb
         self.modules = OrderedDict()
-        self.add_modules(*mods)
+        self.add_modules(*modules)
+        self.clock = 0
+        self.sr = sr
+        self._upload_sr()
+        self._synchronize_clocks()
 
     def __add__(self, module):
         name = module.name
@@ -31,6 +35,17 @@ class MonophonicSynth():
         for mod in mods:
             self += mod
         return self
+
+    def _synchronize_clocks(self):
+        for module in self.modules.values():
+            module.clock = self.clock
+
+    def _upload_sr(self):
+        for module in self.modules.values():
+            module.sr = self.sr
+
+    def _advance_clock(self):
+        self.clock += 1
 
     def play_note(self, note):
         self.modules[self.pb.IN].input_1 = note

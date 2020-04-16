@@ -1,15 +1,45 @@
 import numpy as np
 from scipy.interpolate import interp1d
+from functools import reduce
+from math import copysign
+import operator
 
 def build_cst_function(val=1):
     def func(*x, **kwargs):
         return val
     return func
 
+class NumpyQueue():
+    '''Implements a queue class:
+    Warning: this is a queue, the first element in on the right'''
+    def __init__(self, init=None, maxsize=0, default=0):
+        if init is None:
+            self.size = maxsize
+            self.queue = np.zeros(maxsize) * default
+        elif (maxsize is 0) and (init is not None):
+            self.size = len(init)
+            self.queue = np.asarray(init)[::-1]
+        elif (maxsize is not 0) and (init is not None):
+            self.size = maxsize
+            init = init[:min(len(init), maxsize)]
+            self.queue = np.zeros(maxsize) * default
+            self.queue[:len(init)] = init
+            self.queue = self.queue[::-1]
+
+    def prepend(self, val):
+        tmp = self.queue[-1]
+        self.queue[-1] = val
+        self.queue = np.roll(self.queue, 1)
+        return tmp
+
+#############################
+
 class ModuleBuilder():
     def __init__(self, name='', n_in=1, n_out=1, parameters=[],
                        function=build_cst_function(1)):
         self.name = name
+        self.clock = None
+        self.sr = None
         self.function = function
         ins = ['input_' + str(i+1) for i in range(n_in)]
         self.__dict__.update(zip(ins, [None] * len(ins)))
@@ -39,52 +69,29 @@ class ModuleBuilder():
 
 ###################
 
-class InputModule(ModuleBuilder):
-    '''will be the only one communing with exterior
-    should transform (freq, dur, amp) into signal'''
-    def __init__(
-        self, name='INPUT_module', wf='sin', sr=48000, unit='Hz'
-    ):
-        self._parse_sr(sr, unit)
-        if wf is 'sin':
-            wf = np.sin
+class Inputer(ModuleBuilder):
+    '''translates (freq, amp) into signal'''
+    def __init__(self, name='inputer', wf=np.sin):
         self.wf = wf
         super().__init__(
             name=name, n_in=1, n_out=1, function=self.translate_note)
 
-    def _parse_sr(self, sr, unit):
-        if unit == 'kHz':
-            self.sr = sr * 1e3
-        elif unit == 'Hz':
-            self.sr = sr
-        else:
-            raise Exception('unit {} not understood'.format(unit))
-
     def translate_note(self, input_):
-        freq, dur, amp = input_
-        nbpoint = dur * self.sr
-        return amp * self.wf(
-                    np.arange(nbpoint) * 2 * np.pi / self.sr * freq)
+        freq, amp = input_
+        return amp * self.wf(self.clock / self.sr * 2 * np.pi * freq)
 
 ###################
 
-class SimpleEnvelope(ModuleBuilder):
-    def __init__(self, name='smpl_env', ys=np.ones(10)):
-        self.ys = np.asarray(ys)
+class SimpleLFO(ModuleBuilder):
+    def __init__(self, name='lfo', wf=np.sin, freq=5):
+        self.wf = wf
+        self.freq = freq
         super().__init__(
-            name=name, n_in=1, n_out=1, function=self.function
+            name=name, n_in=0, n_out=1, function=self.function
         )
-        self._make_interpolant()
 
-    def _make_interpolant(self):
-        ts = np.linspace(0, 1, len(self.ys))
-        interp = interp1d(ts, self.ys, kind='cubic')
-        self.interp = interp
-
-    def function(self, input_):
-        self._make_interpolant()
-        env = self.interp(np.linspace(0, 1, len(input_)))
-        return env * input_
+    def function(self):
+        return self.wf(self.clock / self.sr * 2 * np.pi * self.freq)
 
 ####################
 
@@ -92,26 +99,81 @@ class SimpleSaturation(ModuleBuilder):
     def __init__(self, name='simpl_sat', maxamp=1):
         self.maxamp = maxamp
         super().__init__(
-            name=name, n_in=1, n_out=1, function=self.saturate
+            name=name, n_in=1, n_out=1, function=self.function
         )
 
-    def saturate(self, input_):
-        input_ = np.asarray(input_)
-        target = input_.max() * self.maxamp
-        input_[input_ > target] = target
-        input_[input_ < -target] = -target
-        return input_
+    def function(self, input_):
+        if abs(input_) < self.maxamp:
+            return input_
+        else:
+            return copysign(1, input_) * self.maxamp
 
 ###################
 
-class StepSample(ModuleBuilder):
-    def __init__(self, name='step_sample', nb=2):
-        self.nb = nb
-        super().__init__(name=name, n_in=1, n_out=1, function=self.step_sample
+class Combiner(ModuleBuilder):
+    def __init__(self, name='multi', n_in=2,
+                 redfunc=operator.mul, aggfunc=None):
+        self.aggfunc = aggfunc
+        self.redfunc = redfunc
+        super().__init__(
+            name=name, n_in=n_in, n_out=1, function=self.function
         )
 
-    def step_sample(self, input_):
-        input_ = np.array(input_)
-        N = len(input_)
-        input_ = np.repeat(input_[::self.nb], self.nb)[:N]
-        return input_
+    def function(self, *xs):
+        if self.aggfunc is not None:
+            return self.aggfunc(xs)
+        return reduce(self.redfunc, xs)
+
+###################
+
+class Fir(ModuleBuilder):
+    def __init__(self, name='fir', blist=[0.5, 0.5]):
+        self.blist = np.asarray(blist)
+        self.memx = NumpyQueue(maxsize=len(blist))
+        super().__init__(
+            name=name, n_in=1, n_out=1, function=self.function
+        )
+
+    def function(self, x):
+        self.memx.prepend(x)
+        return self.memx.queue[::-1] @ self.blist
+
+class Iir(ModuleBuilder):
+    def __init__(self, name='fir', blist=[0.5], alist=[0.5]):
+        self.blist = np.asarray(blist)
+        self.alist = np.asarray(alist)
+        self.memx = NumpyQueue(maxsize=len(blist))
+        self.memy = NumpyQueue(maxsize=len(alist))
+        super().__init__(
+            name=name, n_in=1, n_out=1, function=self.function
+        )
+
+    def function(self, x):
+        self.memx.prepend(x)
+        y = (self.memx.queue[::-1] @ self.alist
+               + self.memy.queue[::-1] @ self.blist)
+        self.memy.prepend(y)
+        return y
+
+###################
+
+class SimpleDelay(ModuleBuilder):
+    def __init__(self, name='delay', amp=0.5, delay=0.1):
+        self.amp = amp
+        self.delay = delay
+        super().__init__(
+            name=name, n_in=1, n_out=1, function=self.function
+        )
+        self._init_flag = False
+
+    def function(self, x):
+        if self._init_flag == False:
+            self._init_queue()
+        val = self.memo.prepend(x)
+        return x + self.amp * val
+
+    def _init_queue(self):
+        assert self.sr is not None, 'Must upload the sr first'
+        length = int(self.sr * self.delay)
+        self.memo = NumpyQueue(maxsize=length)
+        self._init_flag = True

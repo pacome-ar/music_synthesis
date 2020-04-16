@@ -27,7 +27,7 @@ class Plugboard():
         module_with_output_cables = set(self.modules_ports_out.keys())
         return list(module_with_input_cables
                   - module_with_output_cables
-                  - set(self.IN))
+                  - set([self.IN]))
 
 ##################################
 
@@ -69,7 +69,11 @@ def recurse_plug(module, synth, plugboard):
 
 def _plug_plugboard(synth, pb):
     synth.modules[pb.IN]()
-    [synth.modules[mod]() for mod in pb.get_modules_without_input_cables()]
+    for mod in pb.get_modules_without_input_cables():
+        for cid in pb.modules_ports_in[mod]:
+            (modin, portin), (modout, portout) = pb.cables[cid]
+            _plug(synth.modules[modin], portin,
+                  synth.modules[modout], portout)
     recurse_plug(pb.IN, synth, pb)
     synth.modules[pb.OUT]()
 

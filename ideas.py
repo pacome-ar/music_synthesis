@@ -1,5 +1,5 @@
 import numpy as np
-
+import modules
 ###########################
 
 def step_sample(x, nb=2):
@@ -72,6 +72,19 @@ def make_quantize(step=1, start=0, amp=1):
         return amp * quantize(x, steps)
     return wrapper
 
+###########################
+
+class StepSample(modules.ModuleBuilder):
+    def __init__(self, name='step_sample', nb=2):
+        self.nb = nb
+        super().__init__(name=name, n_in=1, n_out=1, function=self.step_sample
+        )
+
+    def step_sample(self, input_):
+        input_ = np.array(input_)
+        N = len(input_)
+        input_ = np.repeat(input_[::self.nb], self.nb)[:N]
+        return input_
 
 
 
