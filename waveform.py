@@ -1,11 +1,31 @@
 import numpy as np
 
-# class Waveform():
-#     def __init__(self):
-#         self.sin = np.sin
-#         self.saw = lambda x : ((x - np.pi)%(2 * np.pi)) / (np.pi) - 1
-#         self.square = lambda x : ((x - np.pi)%(2 * np.pi) // np.pi - 0.5) * 2
-#         self.tri = lambda x: 2 / (np.pi) * np.abs((x - np.pi/2)%(2*np.pi) - np.pi) - 1
+class Waveform():
+    def __init__(self, ampl=1, center=0, phase=0):
+        self.ampl = ampl
+        self.center = center
+
+        self.sin = lambda x : (
+                        ampl * np.sin(x + phase) + center
+                        )
+        self.saw = lambda x : (
+                        ampl * (((x + phase - np.pi)%(2 * np.pi)) / (np.pi) - 1)
+                        + center
+                        )
+        self.square = lambda x : (
+                        ampl * (
+                            ((x + phase - np.pi)%(2 * np.pi) // np.pi - 0.5)
+                            * 2
+                            )
+                        + center
+                        )
+        self.tri = lambda x: (
+                        ampl * (
+                            2 / (np.pi)
+                            * np.abs((x + phase - np.pi/2)%(2*np.pi) - np.pi)
+                            - 1
+                            )
+                    + center)
 
 def sin_to_rect(n=1, amp=1):
     def wrapper(x):

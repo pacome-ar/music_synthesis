@@ -29,10 +29,29 @@ class Plugboard():
                   - module_with_output_cables
                   - set(self.IN))
 
+##################################
+
+def make_cable_from_list(names):
+    IN = names[0]
+    OUT = names[-1]
+    cables = []
+    for (n1, n2) in zip(names[:-1], names[1:]):
+        cables.append((n1 + ' output_1', n2 + ' input_1'))
+    return IN, OUT, cables
+
+##################################
+
+class LinearPlugboard(Plugboard):
+    def __init__(self, names):
+        IN, OUT, plugs = make_cable_from_list(names)
+        super().__init__(IN, OUT, *plugs)
+
 def _plug(a, in_, b, out_):
     a()
     b.__dict__[out_] = a.__dict__[in_]
-    print('pluging ', a.name, in_, ' on ', b.name, out_)
+    # print('pluging ', a.name, in_, ' on ', b.name, out_)
+
+##################################
 
 def recurse_plug(module, synth, plugboard):
     cables_id = plugboard.modules_ports_in[module]

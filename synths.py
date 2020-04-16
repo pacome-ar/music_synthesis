@@ -1,4 +1,5 @@
 import modules, plugboard
+from collections import OrderedDict
 
 class MonophonicSynth():
     def _return_self(self):
@@ -13,7 +14,7 @@ class MonophonicSynth():
     def __init__(self, name, mods=[], pb=None):
         self.name = name
         self.pb = pb
-        self.modules = {}
+        self.modules = OrderedDict()
         self.add_modules(*mods)
 
     def __add__(self, module):

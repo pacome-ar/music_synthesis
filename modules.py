@@ -69,19 +69,16 @@ class InputModule(ModuleBuilder):
 ###################
 
 class SimpleEnvelope(ModuleBuilder):
-    def __init__(self, name='smpl_env', *ys):
-        if len(ys) == 0:
-            ys = [1]
-        self.ys = ys
+    def __init__(self, name='smpl_env', ys=np.ones(10)):
+        self.ys = np.asarray(ys)
         super().__init__(
             name=name, n_in=1, n_out=1, function=self.function
         )
+        self._make_interpolant()
 
     def _make_interpolant(self):
-        ts = np.linspace(0, 1, len(self.ys) + 2)
-        interp = interp1d(
-            ts, np.concatenate(([0], self.ys, [0])), kind='cubic'
-        )
+        ts = np.linspace(0, 1, len(self.ys))
+        interp = interp1d(ts, self.ys, kind='cubic')
         self.interp = interp
 
     def function(self, input_):
@@ -103,4 +100,18 @@ class SimpleSaturation(ModuleBuilder):
         target = input_.max() * self.maxamp
         input_[input_ > target] = target
         input_[input_ < -target] = -target
+        return input_
+
+###################
+
+class StepSample(ModuleBuilder):
+    def __init__(self, name='step_sample', nb=2):
+        self.nb = nb
+        super().__init__(name=name, n_in=1, n_out=1, function=self.step_sample
+        )
+
+    def step_sample(self, input_):
+        input_ = np.array(input_)
+        N = len(input_)
+        input_ = np.repeat(input_[::self.nb], self.nb)[:N]
         return input_
