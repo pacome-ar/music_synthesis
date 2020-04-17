@@ -28,11 +28,11 @@ class Waveform():
                     + center)
 
 def make_periodic(function, sym=False, neg=False):
-    '''creates periodic function
+    '''creates 2pi periodic function
     form a function f defined on 0, 1 (composition with lfo)'''
-    saw = waveform.Waveform(ampl=0.5, center=0.5, phase=np.pi).saw
-    sq = waveform.Waveform().square
-    tri = waveform.Waveform(ampl=0.5, center=0.5, phase=-np.pi/2).tri
+    saw = Waveform(ampl=0.5, center=0.5, phase=np.pi).saw
+    sq = Waveform().square
+    tri = Waveform(ampl=0.5, center=0.5, phase=-np.pi/2).tri
     if sym:
         def wrapper(x):
             if neg:

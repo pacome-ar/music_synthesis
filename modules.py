@@ -3,6 +3,8 @@ from scipy.interpolate import interp1d
 from functools import reduce
 from math import copysign
 import operator
+import random
+import waveform
 
 def build_cst_function(val=1):
     def func(*x, **kwargs):
@@ -92,6 +94,18 @@ class SimpleLFO(ModuleBuilder):
 
     def function(self):
         return self.wf(self.clock / self.sr * 2 * np.pi * self.freq)
+
+
+class WhiteNoiseGenerator(ModuleBuilder):
+    def __init__(self, name='wnoise', maxamp=1):
+        self.maxamp = maxamp
+        self.sat = SimpleSaturation(maxamp=maxamp).function
+        super().__init__(
+            name=name, n_in=0, n_out=1, function=self.function
+        )
+
+    def function(self):
+        return self.sat(random.gauss(0, 1))
 
 ####################
 
@@ -246,7 +260,7 @@ class ExponentialEnvelope(FunctionEnvelope):
 
 ###################
 
-class SimpleVibrato(modules.ModuleBuilder):
+class SimpleVibrato(ModuleBuilder):
     '''multiply lfo to signal'''
     def __init__(self, name='vib', wf=np.sin, freq=5):
         self.wf = wf
@@ -258,3 +272,46 @@ class SimpleVibrato(modules.ModuleBuilder):
     def function(self, x):
         return x * self.wf(
             self.clock / self.sr * 2 * np.pi * self.freq)
+
+###################
+
+class SimpleFlanger(ModuleBuilder):
+    '''a méthode additive, où le son retardé est ajouté tel quel,
+    l'effet dépend du retard appliqué ;
+    la méthode soustractive, où le son ajouté est
+    l'inverse de la courbe du premier ;
+    le flanger Through-Zero, où l'on applique aussi un
+    retard au signal original pour que le signal modulé passe avant'''
+
+    def __init__(self, name='flanger',
+                 start=0, stop=50, freq=5, kind='add'):
+        self.start = start
+        self.stop = stop
+        self.freq = freq
+        self.lfo = lambda x: int(
+            start
+            + (stop - start)
+                * waveform.Waveform(center=0.5, ampl=0.5).sin(x)
+        )
+        if kind is 'add':
+            self.combine = lambda x, y: x + y
+        elif kind is 'sub':
+            self.combine = lambda x, y: x - y
+        self._init_flag = False
+
+        super().__init__(
+            name=name, n_in=1, n_out=1, function=self.function
+        )
+
+    def function(self, x):
+        if self._init_flag == False:
+            self._init_queue()
+        val = self.memo.prepend(x)
+        index = self.lfo(self.clock / self.sr * 2 * np.pi * self.freq)
+        return self.combine(x, self.memo.queue[index])
+
+    def _init_queue(self):
+        assert self.sr is not None, 'Must upload the sr first'
+        length = int(self.stop+1)
+        self.memo = NumpyQueue(maxsize=length)
+        self._init_flag = True
