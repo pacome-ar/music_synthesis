@@ -224,3 +224,37 @@ class Quantizer(ModuleBuilder):
         else:
             raise ValueError('quantization kind not understood')
         self.function = lambda x: func(x, self.steps)
+
+###################
+
+class FunctionEnvelope(ModuleBuilder):
+    def __init__(self, name='lfo',
+                 func=build_cst_function(1)):
+        self.func = func
+        super().__init__(
+            name=name, n_in=1, n_out=1, function=self.function
+        )
+
+    def function(self, x):
+        return x * self.func(self.clock / self.sr)
+
+class ExponentialEnvelope(FunctionEnvelope):
+    def __init__(self, name='expo', decay=3):
+        assert decay > 0, 'negative decay not supported'
+        func = lambda x: np.exp(-decay * x)
+        super().__init__(name=name, func=func)
+
+###################
+
+class SimpleVibrato(modules.ModuleBuilder):
+    '''multiply lfo to signal'''
+    def __init__(self, name='vib', wf=np.sin, freq=5):
+        self.wf = wf
+        self.freq = freq
+        super().__init__(
+            name=name, n_in=1, n_out=1, function=self.function
+        )
+
+    def function(self, x):
+        return x * self.wf(
+            self.clock / self.sr * 2 * np.pi * self.freq)
