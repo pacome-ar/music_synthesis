@@ -36,38 +36,140 @@ class NumpyQueue():
 
 #############################
 
+def make_default_function(ins, params, outs, val=1):
+    inputs = ins + params
+    vals = [None] * len(inputs)
+    default_kwargs = dict(zip(inputs, vals))
+    def wrapper(**default_kwargs):
+        outputs = dict(zip(outs, [val]*len(outs)))
+        return outputs
+    return wrapper
+
 class ModuleBuilder():
-    def __init__(self, name='', n_in=1, n_out=1, parameters=[],
-                       function=build_cst_function(1)):
+    '''Generic class to build modules
+
+    attrs:
+    ------
+    name: str
+        name of the module
+    ins: list of str
+        list of the inputs of the module
+        an input is a value that is to be set during execution
+    params: list of str
+        list of the parameters of the module
+        a parameter has an internal value, which
+        can be set dynamically by a user
+    outs: list of str
+        list of the outputs of the module
+        outputs are the result of calculations throughout the module
+    function: function
+        the internal function:
+            takes a dictionnary of ins and params
+            returns a dictionnary of outs
+    '''
+    def __init__(self, name='module',
+                       ins=['input_1'], params=[], outs=['output_1'],
+                       function=None,
+                       sr=44000):
+        '''init function'''
         self.name = name
         self.clock = None
-        self.sr = None
-        self.function = function
-        ins = ['input_' + str(i+1) for i in range(n_in)]
-        self.__dict__.update(zip(ins, [None] * len(ins)))
-        outs = ['output_' + str(i+1) for i in range(n_out)]
-        self.__dict__.update(zip(outs, [None] * len(outs)))
-        params = ['param_' + p for p in parameters]
-        self.__dict__.update(zip(params, [None] * len(params)))
+        self.sr = sr
+        if function is None:
+            self.function = make_default_function(ins, params, outs)
+        self.ins = ins
+        self.params = params
+        self.outs = outs
+        self._make_ports(ins)
+        self._make_ports(outs)
+        self._make_ports(params)
+
+    def initialize(self):
+        '''does precalculations before the call
+        when a module is added to a synth
+        usefull if the moduels needs to know informations about the
+        the synth
+        '''
+        pass
+
+    def _make_ports(self, ports):
+        vals = [None] * len(ports)
+        self._update_ports(dict(zip(ports, vals)))
+
+    def _get_ports(self, *ports):
+        return [self.__dict__[port] for port in ports]
+
+    def _get_ports_by_cat(self, cat='ins', valonly=False):
+        listport = self.__dict__[cat]
+        if valonly:
+            return self._get_port(*listport)
+        return dict((p, self.__dict__[p]) for p in listport)
+
+    def _update_ports(self, updatedict):
+        self.__dict__.update(updatedict)
 
     def __repr__(self):
         return 'module ' + self.name + ' : ' + repr(self.__dict__)
 
-    def get_port(self, kind='input', retdict=True):
-        if not retdict:
-            return [k for k in self.__dict__.keys() if kind in k]
-        else:
-            return {k:v for k,v in self.__dict__.items() if kind in k}
-
-    def get(self, *ports):
-        return [self.__dict__[port] for port in ports]
-
     def __call__(self):
-        inputs = self.get_port('input', retdict=True).values()
-        params = self.get_port('param', retdict=True)
-        val = self.function(*inputs, **params)
-        for output in self.get_port('output'):
-            self.__dict__[output] = val
+        ins = self._get_ports_by_cat('ins')
+        params = self._get_ports_by_cat('params')
+        inputs = {**ins, **params}
+        outs = self.function(**inputs)
+        self.__dict__.update(outs)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ###################
 
