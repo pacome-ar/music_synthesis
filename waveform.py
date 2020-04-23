@@ -36,12 +36,12 @@ def make_periodic(function, sym=False, neg=False):
     if sym:
         def wrapper(x):
             if neg:
-                return sq(x) * f(tri(x))
+                return sq(x) * function(tri(x))
             else:
-                return f(tri(x))
+                return function(tri(x))
     else:
         def wrapper(x):
-            return f(saw(x))
+            return function(saw(x))
     return wrapper
 
 def sin_to_rect(n=1, amp=1):
