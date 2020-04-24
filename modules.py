@@ -73,10 +73,12 @@ class ModuleBuilder():
                        sr=44000):
         '''init function'''
         self.name = name
-        self.clock = None
+        self.clock = 0
         self.sr = sr
         if function is None:
             self.function = make_default_function(ins, params, outs)
+        else:
+            self.function = function
         self.ins = ins
         self.params = params
         self.outs = outs
@@ -118,16 +120,70 @@ class ModuleBuilder():
         outs = self.function(**inputs)
         self.__dict__.update(outs)
 
+#############################
 
+class MidiPacket():
+    def __init__(self, note=69, gate=1, vel=1, relvel=0):
+        self.note=note
+        self.gate=gate
+        self.vel=vel
+        self.relvel=relvel
 
+class Keyboard(ModuleBuilder):
+    def __init__(self, name='keyboard'):
+        super().__init__(
+            name=name,
+            ins=['keyboard_in'], params=[],
+            outs=['note', 'gate', 'vel', 'relvel'],
+            function=self.parse_midi)
 
+    def parse_midi(self, keyboard_in=MidiPacket()):
+        return keyboard_in.__dict__
 
+#############################
 
+class Pulse1(ModuleBuilder):
+    def __init__(self, name='pulse1'):
+        self.current = 0
+        self.launchflag = False
+        super().__init__(
+            name=name,
+            ins=['Input'], params=['width'],
+            outs=['Output'],
+            function=self.pulse)
 
+    def pulse(self, Input=1, width=0.1):
+        launch = self.trigger(Input)
+        if launch:
+            self.launchflag = True
+            self.clock = 0
+        if not self.launchflag:
+            return {'Output':0}
+        x = self.clock / self.sr
+        output = {'Output':waveform.pulse(x, width)}
+        return output
 
+    def trigger(self, val):
+        current = self.current
+        self.current = self.Input
+        if val > 0 and current <= 0:
+            return 1
+        else:
+            return 0
 
+#############################
 
+class Amplifier1(ModuleBuilder):
+    def __init__(self, name='amplifier1'):
+        super().__init__(
+            name=name,
+            ins=['Input'], params=['factor'],
+            outs=['Output'],
+            function=self.amplify)
 
+    def amplify(self, Input=0, factor=1):
+        output = {'Output':Input * factor}
+        return output
 
 
 
