@@ -43,6 +43,11 @@ class Waveform():
         return self.ampl * (func(x) + (1 - self.sym))
 
 
+# TODO
+def make_strange_square_error():
+    return Waveform(sr=44000, sym=False).wrapp_func(square, np.arange(44000), 1)
+
+
 def pulse(x, width=1):
     if x < width:
         return 1
