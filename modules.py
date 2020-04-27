@@ -94,6 +94,15 @@ class ModuleBuilder():
         '''
         pass
 
+    def _assert_range(self, buttonval, buttonname, minval, maxval):
+        assert minval <= buttonval <= maxval, \
+            buttonname + f' should be between {minval} and {maxval}'
+
+    def _get_default_value(self, params, values):
+        return [
+            param if param else val for param, val in zip(params, values)
+    ]
+
     def _make_ports(self, ports):
         vals = [None] * len(ports)
         self._update_ports(dict(zip(ports, vals)))

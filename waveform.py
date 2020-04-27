@@ -48,6 +48,17 @@ def make_strange_square_error():
     return Waveform(sr=44000, sym=False).wrapp_func(square, np.arange(44000), 1)
 
 
+def variable_width_wf(x, freq, width, func=np.sin):
+    if width == 0:
+        return 0
+    freq = 2 * 2*np.pi*freq
+    xmod = 0.5 * (saw(x*freq - np.pi) + 1)
+    funcmod = func(xmod * 2*np.pi / (2*width))
+    pulsemod = pulse(xmod, width=width)
+    sq = square(x*freq/2)
+    return funcmod * pulsemod * sq
+
+
 def pulse(x, width=1):
     if x < width:
         return 1
