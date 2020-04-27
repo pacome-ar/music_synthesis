@@ -24,7 +24,7 @@ def normalize_amplitude(amp, norm=1):
 def parse_midi(score, ref=440, tempo=120, norm=1, quarternote=0.25):
     # score is list of tuple-like with (note, duration amplitude)
     score = np.asarray(score)
-    freqences = note_to_freq(score[:,0], ref)
+    frequences = note_to_freq(score[:,0], ref)
     durations = note_value_to_sec(score[:,1], tempo, quarternote)
     amplitudes = normalize_amplitude(score[:,2], norm)
-    return np.vstack((freqences, durations, amplitudes)).T
+    return np.vstack((frequences, durations, amplitudes)).T
