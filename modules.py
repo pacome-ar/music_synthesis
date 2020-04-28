@@ -194,7 +194,33 @@ class Amplifier1(ModuleBuilder):
         output = {'Output':Input * factor}
         return output
 
+#############################
 
+class Mixer3(ModuleBuilder):
+    def __init__(self, name='mix3'):
+        super().__init__(
+            name=name,
+            ins=['Input1', 'Input2', 'Input3'],
+            params=['mix1', 'mix2', 'mix3'],
+            outs=['Output'],
+            function=self.mix)
+
+    def mix(
+        self,
+        Input1=0,
+        Input2=0,
+        Input3=0,
+        mix1=1,
+        mix2=1,
+        mix3=1,
+    ):
+        (Input1, Input2, Input3,
+         mix1, mix2, mix3) = self._get_default_value(
+            [Input1, Input2, Input3, mix1, mix2, mix3],
+            [0, 0, 0, 1, 1, 1]
+        )
+        output = Input1 * mix1 + Input2 * mix2 + Input3 * mix3
+        return {'Output':output}
 
 
 

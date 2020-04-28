@@ -46,6 +46,12 @@ class MonophonicSynth():
 
     def _advance_clock(self):
         self.clock += 1
+
+    def _advance_all_clocks(self):
+        self._advance_clock()
+        for module in self.modules.values():
+            module.clock += 1
+
     #
     # def play_note(self, note):
     #     self.modules[self.pb.IN].input_1 = note
