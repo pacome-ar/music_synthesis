@@ -222,10 +222,99 @@ class Mixer3(ModuleBuilder):
         output = Input1 * mix1 + Input2 * mix2 + Input3 * mix3
         return {'Output':output}
 
+#############################
 
+class ControlMixer(ModuleBuilder):
+    def __init__(self, name='mix3'):
+        super().__init__(
+            name=name,
+            ins=['Input1', 'Input2'],
+            params=['lin', 'inv_switch1', 'inv_switch2',
+                    'mix1', 'mix2'],
+            outs=['Output'],
+            function=self.mix)
 
+    def mix(
+        self,
+        Input1=0,
+        Input2=0,
+        lin=False,
+        inv_switch1=False,
+        inv_switch2=False,
+        mix1=1,
+        mix2=1,
+    ):
+        (Input1, Input2, lin,
+         inv_switch1, inv_switch2,
+         mix1, mix2) = self._get_default_value(
+            [Input1, Input2, lin,
+             inv_switch1, inv_switch2,
+             mix1, mix2],
+            [0, 0, False, False, False, 1, 1]
+        )
+        alpha = 5
 
+        self._assert_range(mix1, 'mix1', 0, 1)
+        self._assert_range(mix2, 'mix2', 0, 1)
 
+        mix1 = self._knob_course(mix1, lin, alpha)
+        mix2 = self._knob_course(mix2, lin, alpha)
+
+        if inv_switch1:
+            Input1 = -Input1
+        if inv_switch2:
+            Input2 = -Input2
+
+        output = Input1 * mix1 + Input2 * mix2
+        return {'Output':output}
+
+    def _knob_course(self, val, lin=True, alpha=5):
+        '''function from envelopes'''
+        if lin:
+            return val
+        else:
+            return (np.exp(alpha * val) - 1) / (np.exp(alpha) - 1)
+
+#############################
+
+class Pan(ModuleBuilder):
+    def __init__(self, name='mix3'):
+        super().__init__(
+            name=name,
+            ins=['Input', 'pan_mod_in'],
+            params=['pan_mod_amp', 'LR_knob'],
+            outs=['L_out', 'R_out'],
+            function=self.mix)
+
+    def mix(
+        self,
+        Input=0,
+        pan_mod_in=0,
+        pan_mod_amp=False,
+        LR_knob=False,
+    ):
+        (Input, pan_mod_in,
+         pan_mod_amp, LR_knob) = self._get_default_value(
+            [Input, pan_mod_in,
+             pan_mod_amp, LR_knob],
+            [0, 0, 1, 0]
+        )
+        self._assert_range(LR_knob, 'LR_knob', -1, 1)
+
+        pan = LR_knob + pan_mod_in * pan_mod_amp
+
+        # saturate pan at -1 or 1
+        if pan < -1:
+            pan = -1
+        elif pan > 1:
+            pan = 1
+
+        right, left = (1 + pan) / 2, (1 - pan) / 2
+
+        L_out = left * Input
+        R_out = right * Input
+
+        return {'L_out':L_out, 'R_out':R_out}
 
 
 
