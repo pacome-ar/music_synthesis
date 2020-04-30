@@ -1,6 +1,6 @@
 import numpy as np
 import waveform, midi, modules
-
+import random
 
 class Master_OSC(modules.ModuleBuilder):
     def __init__(self, name='master_osc1'):
@@ -238,6 +238,21 @@ class OscillatorA(modules.ModuleBuilder):
             mod_lin += FMA_amp * FMA
 
         return freq * 2**(mod_exp/12) + mod_lin
+
+
+class Noise(modules.ModuleBuilder):
+    '''limited to white noise for the moment'''
+
+    def __init__(self, name='noise1'):
+        super().__init__(
+            name=name,
+            ins=[], params=['color'],
+            outs=['Output'],
+            function=self.make_noise)
+
+    def make_noise(self, color=0):
+        '''TODO add color selection'''
+        return random.gauss(0, 1)
 
 ######################################
 ################ TEST ################
