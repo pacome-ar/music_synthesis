@@ -36,6 +36,48 @@ class NumpyQueue():
 
 #############################
 
+class MockModule():
+    '''Transparent module builder for testing purposes'''
+    def __init__(self, name):
+        self.name = name
+        self.ins = set()
+        self.outs = set()
+
+    def add_input(self, input_):
+        self.__dict__.update({input_:None})
+        self.ins |= set([input_])
+
+    def add_output(self, output_):
+        self.__dict__.update({output_:None})
+        self.outs |= set([output_])
+
+    def __call__(self):
+        self.__dict__.update(
+            zip(list(self.outs), [self.name] * len(self.outs))
+        )
+
+    def __repr__(self):
+        return 'module ' + self.name + ' : ' + repr(self.__dict__)
+
+def make_modules_from_cables(cables):
+    modules = dict()
+    for ((start_mod, start_port), (end_mod, end_port)) in cables:
+        try:
+            modules[start_mod].add_output(start_port)
+        except KeyError:
+            module = MockModule(start_mod)
+            module.add_output(start_port)
+            modules[start_mod] = module
+        try:
+            modules[end_mod].add_output(end_port)
+        except KeyError:
+            module = MockModule(end_mod)
+            module.add_output(end_port)
+            modules[end_mod] = module
+    return modules
+
+#############################
+
 def make_default_function(ins, params, outs, val=1):
     inputs = ins + params
     vals = [None] * len(inputs)
