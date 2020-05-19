@@ -35,10 +35,10 @@ def message_display(text):
 keys = [
     'K_c', 'K_f', 'K_v', 'K_g', 'K_b', 'K_n',
     'K_j', 'K_COMMA', 'K_k', 'K_SEMICOLON',
-    'K_l', 'K_COLON', 'K_m', 'K_EXCLAIM'
+    'K_l', 'K_COLON', 'K_EXCLAIM'
     ]
-notes = 'C C+ D D+ E F F+ G G+ A A+ B'.split(' ')
-midi_dict = dict(zip(keys, range(60, 72)))
+notes = 'C C+ D D+ E F F+ G G+ A A+ B C'.split(' ')
+midi_dict = dict(zip(keys, range(60, 73)))
 note_dict = dict(zip(keys, notes))
 
 screen.fill(BLACK)

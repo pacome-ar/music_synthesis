@@ -1,9 +1,50 @@
+import pygame
+
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.backends.backend_agg as agg
 from matplotlib import pyplot as plt
 
 import modules
+
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+
+########################################
+
+def text_objects(text, font, color=WHITE):
+    textSurface = font.render(text, True, color)
+    return textSurface, textSurface.get_rect()
+
+def message_display(screen, text, width, height, textsize=50):
+    largeText = pygame.font.Font('freesansbold.ttf', textsize)
+    TextSurf, TextRect = text_objects(text, largeText)
+    TextRect.center = (width, height)
+    screen.blit(TextSurf, TextRect)
+
+def detect_note_events(midi_dict, note, mute):
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            return None
+            # quit()
+        key = pygame.key.get_pressed()
+        for k, v in midi_dict.items():
+            if key[pygame.__dict__[k]]:
+                note = v
+                mute = False
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.__dict__[k]:
+                    note = v
+                    mute = True
+    return note, mute
+
+
+
+
+
+
+
+########################################
 
 class Oscilloscope():
     def __init__(
